@@ -1,46 +1,46 @@
-%% PARAMETERS YOU NEED TO SPECIFY
+%% load in the experimental details
 clear; clc;
+% parameters about your experiment
+cellType='Mi1';
+stim='Flash_32frames';
+sensor='GC6f'; 
+flyEye='right';
+surgeon='Harsh';
+
+dataPath=GetPathsFromDatabase(cellType,stim,sensor,flyEye,surgeon);
+
+%% PARAMETERS YOU NEED TO SPECIFY
 param.movieChan = 1; % which channels do you want to analyze in the movie
-%param.probe_epochs = 1:7;
+param.probe_epochs = 1 : 7;
 param.interleave_epochs = 8;
 
-% parameters for the ROi selection
-param.corr_thresh = 0.2; % correlation threshold
+% what flies do you want to analyze?
+param.analyze_these = [3];
+resp = cell( length(param.analyze_these), 1 );
+
+% parameters for the ROI selection
+param.corr_thresh = 0.9; % correlation threshold
 param.probe_correlation = true; % do you want to use probe correlations for ROI selection
 param.probe_correlation_type = 'hard code indices'; % type of correlation comparison for the 
-param.corr_idxs{1} = [35, ]; % indices of first probe I want to use for correlation
-param.corr_idxs{2} = [5280, 6332, 5282, 6337]; % indices of 2nd probe I want to use for correlation
+param.corr_idxs{1} = [112, 446]; %[103, 446]; % indices of first probe I want to use for correlation
+param.corr_idxs{2} = [4763, 5097]; %[4754 5097]; % indices of 2nd probe I want to use for correlation
 
+% parameters for what code will compute
 param.force_alignment = false; % force alignment calculation?
-param.force_roi_selection = false; % force calculation of ROIs?
-param.manual_roi = true; % manually define the ROIs
+param.force_roi_selection = true; % force calculation of ROIs?
+param.manual_roi = false; % manually define the ROIs
 
-%% load in the experimental details
-
-cellType='Tm3';
-stim='GreyBlink_Probe_LongGreyBlink';
-sensor='gc6f';
-flyEye='right';
-surgeon='Allison';
-
-%dataPath=GetPathsFromDatabase(cellType,stim,sensor,flyEye,surgeon);
-dataPath{1,1} = 'X:\2p_microscope_data\+;gc6f;Tm3-Gal4\GreyBlink_Probe_LongGreyBlink\2021\07_08\18_06_39';
-dataPath{2,1} = 'X:\2p_microscope_data\+;gc6f;Tm3-Gal4\GreyBlink_Probe_LongGreyBlink\2021\07_15\16_59_56';
-
-param.analyze_these = [1];
-
-%%
-resp = cell( length(param.analyze_these), 1 );
+%% Run Analysis
 for i_ex = param.analyze_these
     
-    
     %% load in experimental parameters and raw movie
-    [exp, raw_movie] = get_exp_details( dataPath{i_ex}, param);
+    [exp_info, raw_movie] = get_exp_details( dataPath{i_ex}, param);
     % number of fly I'm on
     param.fly_num = find(i_ex == param.analyze_these);
     clc;
+    
     % in case you want to plot the epochs...
-    % figure; plot( exp.epochVal ); ylabel('epoch index'); xlabel('time index'); title(['Fly', num2str(param.fly_num)])
+    % figure; plot( exp_info.epochVal ); ylabel('epoch index'); xlabel('time index'); title(['Fly', num2str(param.fly_num)])
 
     %% register the relaxed mean image with each frame to get the alignment
     % find dimensions of image
@@ -101,10 +101,6 @@ for i_ex = param.analyze_these
 
     corr_img = neighboring_pixel_correlation( filtered_movie );
     
-    % dot correlation image with the tissue mask, since we assume 0
-    % correlation for background
-    corr_img_filt = corr_img .* tissue_mask;
-    
     disp('Finished Calculating Correlation Image')
     %% Get ROIs from correlation image
     
@@ -128,22 +124,15 @@ for i_ex = param.analyze_these
     disp('Finished Calculating ROIs')
 
     %% Get the response of each ROI over time 
-    roi_dff = zeros( n_t, num_rois );
-
-    % loop through each ROI
-    for i = 1 : num_rois
-        num_pixels = sum(roi_final == i, 'all'); % size of ROI
-        
-        % intensity of this ROI over time
-        intensity_trace = (sum(sum((roi_final == i) .* filtered_movie, 1), 2)) ...
-                              ./ (num_pixels);
-                          
-        % Delta F over F of this fly
-        F0 = mean( intensity_trace( ismember(exp.epochVal, param.interleave_epochs) ) );
-        roi_dff(:,i) = ( intensity_trace - F0 ) / F0;
-    end
     
-    epoch_trace = exp.epochVal; % rename this to make it easier to remember
+    %roi_dff_method = 'mean_resp'; % sets F0 to the mean interleave response
+    roi_dff_method = 'exponential'; % fits exponential to each ROI
+    roi_dff = roi_dff_calc( param, exp_info, roi_final, filtered_movie, roi_dff_method);
+    epoch_trace = exp_info.epochVal; % rename this to make it easier to remember
+    
+    %% save important output to resp cell array
+    resp{param.fly_num}.dff = roi_dff;
+    resp{param.fly_num}.epoch_trace = epoch_trace;
     
     %% Plot Stuff That Every User Probably Wants
     
@@ -154,7 +143,7 @@ for i_ex = param.analyze_these
 
         subplot(2, 1, 1)
         % subplot of dx change
-        plot(exp.time ./ 60, dx, 'linewidth', 1)
+        plot(exp_info.time ./ 60, dx, 'linewidth', 1)
         xlabel('time (minutes)')
         ylabel('dx (pixels)')
         title([num2str( param.fly_num ), '; Displacement in "x" direction'])
@@ -162,7 +151,7 @@ for i_ex = param.analyze_these
 
         subplot(2, 1, 2)
         % subplot of dy change
-        plot(exp.time ./ 60, dy, 'linewidth', 1)
+        plot(exp_info.time ./ 60, dy, 'linewidth', 1)
         xlabel('time (minutes)')
         ylabel('dy (pixels)')
         title([num2str( param.fly_num ), '; Displacement in "y" direction'])
@@ -182,9 +171,9 @@ for i_ex = param.analyze_these
 
             % loop through both probes
             subplot(1,2,i_p)
-            plot( exp.time(probe_idxs{i_p}) ./ 60, roi_dff( probe_idxs{i_p} , :) ); hold on;
+            plot( exp_info.time(probe_idxs{i_p}) ./ 60, roi_dff( probe_idxs{i_p} , :) ); hold on;
             for i_epoch = 1 : length(epoch_change)
-                plot( ones(2,1).* exp.time( epoch_change(i_epoch) + probe_idxs{i_p}(1) )  ./ 60, [y_min; y_max], '--', 'color', 0.5 * ones(1,3) )
+                plot( ones(2,1).* exp_info.time( epoch_change(i_epoch) + probe_idxs{i_p}(1) )  ./ 60, [y_min; y_max], '--', 'color', 0.5 * ones(1,3) )
             end
             xlabel('time (minutes)')
             ylabel('$\Delta F / F$', 'interpreter', 'latex')
@@ -192,14 +181,14 @@ for i_ex = param.analyze_these
             subtitle('temporal trace used for ROI selection')
             set(gca, 'FontSize', 25)
             ylim( [ y_min, y_max] )
-            x_min = min(exp.time( probe_idxs{i_p} )  ./ 60);
-            x_max = max(exp.time( probe_idxs{i_p} )  ./ 60);
+            x_min = min(exp_info.time( probe_idxs{i_p} )  ./ 60);
+            x_max = max(exp_info.time( probe_idxs{i_p} )  ./ 60);
             xlim([x_min, x_max])
         end
 
         % plot total response
         MakeFigure; hold on;
-        plot(exp.time ./ 60, roi_dff);
+        plot(exp_info.time ./ 60, roi_dff);
 
         y_max = max(roi_dff, [], 'all') * 1.1; % 10% bigger than largest response
         y_min = min(roi_dff, [], 'all');
@@ -207,13 +196,13 @@ for i_ex = param.analyze_these
 
         epoch_change = find( diff( epoch_trace ) );
         for i_epoch = 1 : length(epoch_change)
-            plot( ones(2,1).* exp.time( epoch_change(i_epoch) ) ./ 60, [y_min; y_max], '--', 'color', 0.5 * ones(1,3) )
+            plot( ones(2,1).* exp_info.time( epoch_change(i_epoch) ) ./ 60, [y_min; y_max], '--', 'color', 0.5 * ones(1,3) )
         end
         xlabel('time (minutes)');
         ylabel('$\Delta F / F$', 'interpreter', 'latex')
         title(['Fly ', num2str( param.fly_num ) ,' Response'])
         ylim([y_min, y_max])
-        xlim([0, exp.time(end)./60])
+        xlim([0, exp_info.time(end)./60])
         set(gca, 'FontSize', 25)
 
         % plot the correlation image with labeled ROIs
@@ -239,6 +228,7 @@ for i_ex = param.analyze_these
         end
         title(['Fly ', num2str(param.fly_num) ,' Mean Movie with ROIs'])
         set(gca, 'FontSize', 25)
+        
     end
     
     clc;

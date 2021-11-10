@@ -1,4 +1,4 @@
-function [exp, raw_movie] = get_exp_details(dataPath, param)
+function [exp_info, raw_movie] = get_exp_details(dataPath, param)
 % this function takes in a cell array of paths and outputs all the
 % experimental details of the recording in exp
 
@@ -21,15 +21,15 @@ function [exp, raw_movie] = get_exp_details(dataPath, param)
     
     % load in image description
     tmp = LoadImageDescription(dataPath);
-    exp.state = tmp;%%%
-    linescan = ~exp.state.acq.scanAngleMultiplierSlow;
+    exp_info.state = tmp;%%%
+    linescan = ~exp_info.state.acq.scanAngleMultiplierSlow;
     
     % load in photodiode info
-    [exp.photodiode.data, exp.photodiode.highResLinesPerFrame] = ReadInPhotodiode(exp.state, dataPath); %%%
+    [exp_info.photodiode.data, exp_info.photodiode.highResLinesPerFrame] = ReadInPhotodiode(exp_info.state, dataPath); %%%
     
     % get epoch list
-    [epochBegin, epochEnd, endFlash, flashBeginInd] = GetStimulusBounds( exp.photodiode.data, ...
-        exp.photodiode.highResLinesPerFrame, exp.state.acq.frameRate, linescan );
+    [epochBegin, epochEnd, endFlash, flashBeginInd] = GetStimulusBounds( exp_info.photodiode.data, ...
+        exp_info.photodiode.highResLinesPerFrame, exp_info.state.acq.frameRate, linescan );
     
     if length(endFlash)>1
         error(['ERROR: more than one photodiode flash was 20 projector frames long.\n',...
@@ -38,8 +38,8 @@ function [exp, raw_movie] = get_exp_details(dataPath, param)
     end
     
     % store when epoch begins and ends
-    exp.epochBegin = floor(epochBegin) + 1;
-    exp.epochEnd = floor(epochEnd) + 1;
+    exp_info.epochBegin = floor(epochBegin) + 1;
+    exp_info.epochEnd = floor(epochEnd) + 1;
     
     % load in the stimulus data
     tmp = load(fullfile(dataPath, 'stimulusData', 'stimdata.mat'));
@@ -50,16 +50,16 @@ function [exp, raw_movie] = get_exp_details(dataPath, param)
     stimData_epoch( stimData_epoch==0 ) = [];
     
     % get rid of stuff past the last photodiode flash    
-    stimData_epoch( stimData_time > (epochEnd-epochBegin)/exp.state.acq.frameRate ) = [];
-    stimData_time( stimData_time > (epochEnd-epochBegin)/exp.state.acq.frameRate ) = [];
+    stimData_epoch( stimData_time > (epochEnd-epochBegin)/exp_info.state.acq.frameRate ) = [];
+    stimData_time( stimData_time > (epochEnd-epochBegin)/exp_info.state.acq.frameRate ) = [];
     
     % interpolate new list of epoch
-    exp.time = linspace(stimData_time(1),stimData_time(end),floor(epochEnd)-floor(epochBegin)+1);
-    exp.epochVal = round(interp1(stimData_time,stimData_epoch,exp.time,'nearest'))';
+    exp_info.time = linspace(stimData_time(1),stimData_time(end),floor(epochEnd)-floor(epochBegin)+1);
+    exp_info.epochVal = round(interp1(stimData_time,stimData_epoch,exp_info.time,'nearest'))';
     
     % find out which channels where being acquired
-    acqCell = struct2cell(exp.state.acq);
-    acqFldNames = fieldnames(exp.state.acq);
+    acqCell = struct2cell(exp_info.state.acq);
+    acqFldNames = fieldnames(exp_info.state.acq);
     chanAcqState = [acqCell{~cellfun('isempty', regexp(acqFldNames, 'saving.*(\d+)'))}];
     acquiredChannels = find(chanAcqState);
 
@@ -83,7 +83,7 @@ function [exp, raw_movie] = get_exp_details(dataPath, param)
     end
     
     % only take the part of the movie when stimulus was presented
-    raw_movie = raw_movie(:,:, exp.epochBegin : exp.epochEnd, :);
+    raw_movie = raw_movie(:,:, exp_info.epochBegin : exp_info.epochEnd, :);
     
     
 end
