@@ -65,7 +65,12 @@ function [exp_info, raw_movie] = get_exp_details(dataPath, param)
 
     [wasAcq,desiredChanIdxs] = ismember(param.movieChan,acquiredChannels);
     
-    if isempty(acquiredChannels)
+    if length(param.movieChan) > 1
+        % we'll trust the user knows whatthey're doing
+        warning('The acquired channels was not stored, so I will assume channels 1, 2, and 3 were acquired')
+        acquiredChannels = [1, 2, 3];
+        desiredChanIdxs = param.movieChan;
+    elseif isempty(acquiredChannels)
         warning('The acquired channels was not stored, so I will assume channels 1 and 3 were acquired')
         acquiredChannels = [1, 3];
         desiredChanIdxs = 1;
