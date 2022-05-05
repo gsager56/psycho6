@@ -1,9 +1,9 @@
-function roi_final = probe_correlation( movie, param, roi_init, corr_img )
+function roi_final = probe_correlation( movie, param, roi_init, corr_img, probe_idxs )
 % this roi selection function picks ROIs whose response is highly
 % correlated from the first and second probe presentation
 
-    probe_1_idxs = param.corr_idxs{1}( 1 + 2*(param.fly_num-1) ) : param.corr_idxs{1}( 2 + 2*(param.fly_num-1) );
-    probe_2_idxs = param.corr_idxs{2}( 1 + 2*(param.fly_num-1) ) : param.corr_idxs{2}( 2 + 2*(param.fly_num-1) );
+    probe_1_idxs = probe_idxs{1};
+    probe_2_idxs = probe_idxs{2};
     roi_idx_init = unique( roi_init( roi_init>0 ) ); % list of unique, initial ROI
 
     % initialize the roi final mask
@@ -22,7 +22,7 @@ function roi_final = probe_correlation( movie, param, roi_init, corr_img )
             % the sake of time, let's not bother calculating the
             % correlation of this ROI's activity during the 1st and 2nd
             % probe
-        elseif strcmp(param.probe_correlation_type, 'hard code indices')
+        elseif strcmp(param.probe_correlation_type, 'probe indices')
             % use the indices specified by the user to compute which ROIs
             % are responding to the probe
             roi_size = sum(this_roi_mask, 'all'); % size of ROI in pixels

@@ -1,13 +1,9 @@
     
-function [dx, dy, aligned_movie, tissue_mask] = movie_alignment_registration( movie, dataPath )
+function [dx, dy, aligned_movie, tissue_mask] = movie_alignment_registration( movie, tissue_mask )
     % do the alignment
     disp('Doing alignment, this will take on the order of 10s of minutes')
     
     [n_rows, n_cols, n_t] = size( movie );
-    
-    % get the relaxed image
-    mean_movie = mean( movie, 3);
-    tissue_mask = ~RelaxationNetwork(mean_movie, 5, 'correlation_img');
     
     dx = zeros(1,n_t);
     dy = zeros(1,n_t);
@@ -76,17 +72,5 @@ function [dx, dy, aligned_movie, tissue_mask] = movie_alignment_registration( mo
             disp([num2str(round(100 * i_t / n_t)), '% done with alignment'])
         end
     end
-    
-    % only save the the rows and columns that stayed in frame
-    good_cols = [abs(min(dx)) + 1 : n_cols - max(dx)]; % columns that stayed in frame
-    good_rows = [max(dy) + 1 : n_rows - abs(min(dy))]; % rows that stayed in frame
-    
-    % only save the good part of tissue mask
-    tissue_mask = tissue_mask(good_rows, good_cols);
-
-    % save the displacement in x and y
-    mkdir(fullfile(dataPath, 'psycho6'));
-    save(fullfile(dataPath, 'psycho6', 'alignment_info.mat'), ...
-        'dx', 'dy', 'tissue_mask');
 end
     

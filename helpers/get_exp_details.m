@@ -1,14 +1,6 @@
 function [exp_info, raw_movie] = get_exp_details(dataPath, param)
 % this function takes in a cell array of paths and outputs all the
 % experimental details of the recording in exp
-
-    % let's check some stuff in the param structure to try and help the
-    % user know if they might be making a mistake
-    if isfield( param, 'epochs_for_selectivity' ) & isfield( param, 'corr_idxs' )
-        
-        error(['ERROR: Please either leave corr_idxs empty or epochs_for_selectivity empty. ',...
-            'This helps ensure you do not make any unintended mistakes'])
-    end
     
     
     % load in the param file information - this may not be necessary

@@ -24,7 +24,7 @@ param.probe_correlation = true; % do you want to use probe correlations for ROI 
 param.probe_correlation_type = 'probe indices'; % how to roi correlations from the 1st and 2nd probes
 
 % parameters for what code will compute
-param.force_alignment = true; % force alignment calculation?
+param.force_alignment = false; % force alignment calculation?
 param.force_roi_selection = true; % force calculation of ROIs?
 param.manual_roi = false; % manually define the ROIs
 
@@ -169,7 +169,7 @@ for i_ex = param.analyze_these
 
         subplot(2, 1, 2)
         % subplot of dy change
-        plot(exp_info.time ./ 60, dy_filt, 'linewidth', 1)
+        plot(exp_info.time ./ 60, dy, 'linewidth', 1)
         xlabel('time (minutes)')
         ylabel('dy (pixels)')
         title(['Fly ', num2str( param.fly_num ), '; Median Filtered Displacement in "y" direction'])
