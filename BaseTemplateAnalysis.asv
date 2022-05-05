@@ -28,7 +28,7 @@ param.mean_amplification_thresh = 1.2; % this gets rid of ROIs with bad F0 fits 
 param.force_alignment = false; % force alignment calculation?
 param.force_roi_selection = true; % force calculation of ROIs?
 param.manual_roi = false; % manually define the ROIs
-param.group_touching_rois = false; % group rois if they're touching?
+param.group_method = 'None'; % how to group ROIs
 
 %% Run Analysis
 for i_ex = param.analyze_these
@@ -136,68 +136,31 @@ for i_ex = param.analyze_these
         end
         probe_idxs = get_probe_idxs(exp_info.epochVal, param);
         roi_select = probe_correlation( filtered_movie, param, roi_extract, corr_img, probe_idxs );
-        if param.group_touching_rois
-            roi_select = bwlabel( roi_select>0 );
-        end
         
+        if strcmp(param.group_method, 'None')
+            % do nothing
+        elseif strcmp(param.group_method, 'touching')
+            % group rois that are touching
+            roi_select = bwlabel( roi_select>0 );
+        elseif strcmp(param.group_method, 'manual')
+            % allow user to manually group ROIs
+            
+        end
         save(roi_mask_file, 'roi_extract', 'roi_select');
     end
-    num_rois = max(roi_select,[],'all'); % recalculate number of ROIs
-    
-    
 
     %% Get the response of each ROI over time 
     
     %roi_dff_method = 'mean_resp'; % sets F0 to the mean interleave response
     roi_dff_method = 'exponential'; % fits exponential to each ROI
-    [roi_dff, roi_raw_intensity, inter_fits] = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method);
-    
-    % find mean interleave fit divided by mean interleave response for each
-    % interleave presentation
-    inter_bool = ismember(exp_info.epochVal, param.interleave_epochs);
-    inter_epoch_ids = bwlabel(inter_bool);
-    mean_inter_resp = zeros(max(inter_epoch_ids),num_rois);
-    mean_inter_fit = zeros(max(inter_epoch_ids),num_rois);
-    mean_inter_times = zeros(max(inter_epoch_ids),1);
-    for i_inter_epoch = 1 : max(inter_epoch_ids)
-        mean_inter_times(i_inter_epoch) = mean(exp_info.time(i_inter_epoch==inter_epoch_ids));
-        mean_inter_resp(i_inter_epoch,:) = mean(roi_raw_intensity(i_inter_epoch==inter_epoch_ids,:),1);
-        mean_inter_fit(i_inter_epoch,:) = mean(inter_fits(i_inter_epoch==inter_epoch_ids,:),1);
-    end
-    
-    inter_factor = mean_inter_fit ./ mean_inter_resp;
-    inter_factor( inter_factor < 1 ) = 1 ./ inter_factor( inter_factor < 1 );
-    
-    remove_rois_bool = mean(inter_factor,1) > param.mean_amplification_thresh;
-    remove_rois = find(remove_rois_bool);
-    
-    if ~isempty(remove_rois)
-        disp( ['Removing ', num2str(length(remove_rois)),'/', num2str(num_rois),' ROIs due to poor interleave fits'] )
-        % there are ROIs outside the amplification threshold that need to
-        % be removed
-        roi_counter = 0;
-        roi_final = zeros( size(roi_select) );
-        for i_roi = 1 : num_rois
-            if ~any(i_roi==remove_rois)
-                % this ROI is not to be removed, so add it
-                roi_counter = roi_counter + 1;
-                roi_final( i_roi == roi_select ) = roi_counter;
-            end
-        end
-        num_rois = max(roi_final,[],'all');
-    else
-        % there are no ROIs to remove
-        roi_final = roi_select;
-    end
-    
-    % correct roi_dff, roi_raw_intensity, inter_fits, inter_resp,
-    % inter_factor, mean_inter_
-    
+    [roi_dff, roi_final, mean_inter] = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method);
+    num_rois = max(roi_final,[],'all');
     epoch_trace = exp_info.epochVal; % rename this to make it easier to remember
     disp('Finished Calculating ROIs')
     %% save important output to resp cell array
     resp{param.fly_num}.dff = roi_dff;
     resp{param.fly_num}.epoch_trace = epoch_trace;
+    resp{param.fly_num}.roi_final = roi_final
     
     %% Plot Stuff That Every User Probably Wants
     
@@ -228,7 +191,6 @@ for i_ex = param.analyze_these
         y_min = min(roi_dff( [probe_idxs{1}, probe_idxs{2}] , :), [], 'all');
         y_min = y_min * (1 - sign(y_min)*0.1);
         for i_p = 1 : 2
-
             % find where there's an epoch change
             epoch_change = find( diff( epoch_trace( probe_idxs{i_p} ) ) );
 
@@ -249,7 +211,7 @@ for i_ex = param.analyze_these
             xlim([x_min, x_max])
         end
 
-        % plot total response
+        % plot response over entire recording
         MakeFigure; hold on;
         plot(exp_info.time ./ 60, roi_dff);
 
@@ -274,7 +236,7 @@ for i_ex = param.analyze_these
         colormap(gray)
         axis off
         for i_roi = 1 : num_rois
-            visboundaries(bwboundaries(roi_select==i_roi), 'LineStyle', '--','LineWidth', 0.1, 'color', 'red');
+            visboundaries(bwboundaries(roi_final==i_roi), 'LineStyle', '--','LineWidth', 0.1, 'color', 'red');
         end
         title(['Fly ', num2str(param.fly_num) ,' Mean Movie with ROIs'])
         set(gca, 'FontSize', 25)
@@ -290,12 +252,12 @@ for i_ex = param.analyze_these
         
         % plot interleave fit divided by interleave response (mean)
         MakeFigure; hold on;
-        plot(mean_inter_times / 60, mean_inter_fit ./ mean_inter_resp, 'LineWidth', 1)
-        h = plot(mean_inter_times / 60, 1, 'LineWidth', 1);
+        plot(mean_inter.times / 60, mean_inter.fit ./ mean_inter.resp, 'LineWidth', 1)
+        h = plot(mean_inter.times / 60, 1, 'LineWidth', 1);
         legend(h, 'Ideal Case')
         xlabel('Time (minutes)')
         ylabel('Factor Enhancement')
-        title(['Fly ', num2str(param.fly_num) ,' Mean Inter Fit / Mean Inter Resp'])
+        title(['Fly ', num2str(param.fly_num) ,' Interleave Fit / Interleave Response'])
         set(gca, 'FontSize', 25)
         
     end

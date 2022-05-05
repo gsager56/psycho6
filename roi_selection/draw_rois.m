@@ -1,4 +1,3 @@
-
 function roi_mask = draw_rois( img )
 % given an input image, this function returns the ROI mask. The user draws
 % polygons around the ROIs they want. It does this until the user specifies
