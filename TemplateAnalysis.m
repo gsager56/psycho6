@@ -22,11 +22,13 @@ resp = cell( length(param.analyze_these), 1 );
 param.corr_thresh = 0.9; % correlation threshold
 param.probe_correlation = true; % do you want to use probe correlations for ROI selection
 param.probe_correlation_type = 'probe indices'; % how to roi correlations from the 1st and 2nd probes
+param.mean_amplification_thresh = 1.2; % this gets rid of ROIs with bad F0 fits when computing delta F over F
 
 % parameters for what code will compute
-param.force_alignment = true; % force alignment calculation?
+param.force_alignment = false; % force alignment calculation?
 param.force_roi_selection = true; % force calculation of ROIs?
 param.manual_roi = false; % manually define the ROIs
+param.group_touching_rois = false; % group rois if they're touching?
 
 %% Run Analysis
 for i_ex = param.analyze_these
@@ -134,20 +136,21 @@ for i_ex = param.analyze_these
         end
         probe_idxs = get_probe_idxs(exp_info.epochVal, param);
         roi_select = probe_correlation( filtered_movie, param, roi_extract, corr_img, probe_idxs );
+        if param.group_touching_rois
+            roi_select = bwlabel( roi_select>0 );
+        end
         
         save(roi_mask_file, 'roi_extract', 'roi_select');
     end
-    num_rois = max(roi_select,[],'all'); % recalculate number of ROIs
-    
-    disp('Finished Calculating ROIs')
 
     %% Get the response of each ROI over time 
     
     %roi_dff_method = 'mean_resp'; % sets F0 to the mean interleave response
     roi_dff_method = 'exponential'; % fits exponential to each ROI
-    roi_dff = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method);
+    [roi_dff, roi_final, mean_inter] = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method);
+    num_rois = max(roi_final,[],'all');
     epoch_trace = exp_info.epochVal; % rename this to make it easier to remember
-    
+    disp('Finished Calculating ROIs')
     %% save important output to resp cell array
     resp{param.fly_num}.dff = roi_dff;
     resp{param.fly_num}.epoch_trace = epoch_trace;
@@ -193,7 +196,7 @@ for i_ex = param.analyze_these
             end
             xlabel('time (minutes)')
             ylabel('$\Delta F / F$', 'interpreter', 'latex')
-            title(['Probe ', num2str(i_p)])
+            title(['Fly ', num2str(param.fly_num), ' Probe ', num2str(i_p)])
             subtitle('temporal trace used for ROI selection')
             set(gca, 'FontSize', 25)
             ylim( [ y_min, y_max] )
@@ -220,19 +223,6 @@ for i_ex = param.analyze_these
         ylim([y_min, y_max])
         xlim([0, exp_info.time(end)./60])
         set(gca, 'FontSize', 25)
-
-        % plot the correlation image with labeled ROIs
-        MakeFigure;
-        imagesc(corr_img); hold on;
-        caxis([0,1])
-        colorbar
-        colormap(gray)
-        axis off
-        for i_roi = 1 : num_rois
-            visboundaries(bwboundaries(roi_select==i_roi), 'LineStyle', '--','LineWidth', 0.1, 'color', 'red');
-        end
-        title(['Fly ', num2str(param.fly_num) ,' Correlation Image with ROIs'])
-        set(gca, 'FontSize', 25)
         
         % plot the mean movie with labeled ROIs
         MakeFigure;
@@ -243,6 +233,25 @@ for i_ex = param.analyze_these
             visboundaries(bwboundaries(roi_select==i_roi), 'LineStyle', '--','LineWidth', 0.1, 'color', 'red');
         end
         title(['Fly ', num2str(param.fly_num) ,' Mean Movie with ROIs'])
+        set(gca, 'FontSize', 25)
+        
+        % plot the region circling neural tissue
+        MakeFigure;
+        imagesc(mean_movie); hold on;
+        colormap(gray)
+        axis off
+        visboundaries(bwboundaries(tissue_mask), 'LineStyle', '--','LineWidth', 0.1, 'color', 'red');
+        title(['Fly ', num2str(param.fly_num) ,' Tissue Mask Over Mean Movie'])
+        set(gca, 'FontSize', 25)
+        
+        % plot interleave fit divided by interleave response (mean)
+        MakeFigure; hold on;
+        plot(mean_inter.times / 60, mean_inter.fit ./ mean_inter.resp, 'LineWidth', 1)
+        h = plot(mean_inter.times / 60, 1, 'LineWidth', 1);
+        legend(h, 'Ideal Case')
+        xlabel('Time (minutes)')
+        ylabel('Factor Enhancement')
+        title(['Fly ', num2str(param.fly_num) ,' Interleave Fit / Interleave Response'])
         set(gca, 'FontSize', 25)
         
     end

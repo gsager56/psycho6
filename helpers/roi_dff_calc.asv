@@ -1,4 +1,4 @@
-function [roi_dff, roi_final, mean_inter] = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method)
+function [roi_dff, roi_raw_intensity, inter_fits] = roi_dff_calc( param, exp_info, roi_select, filtered_movie, roi_dff_method)
 % param is the structure of params given by user about the experiment
 % epoch_trace is the temporal trace of epoch indices
 % roi_final is a mask of all the ROIs
@@ -81,20 +81,19 @@ if ~isempty(remove_rois)
         end
     end
 
+    % correct roi_dff, roi_raw_intensity, inter_fits, inter_resp,
+    % inter_factor, mean_inter_fit, and mean_inter_resp after removing ROIs
     roi_dff = roi_dff(:,~remove_rois_bool);
-    %roi_raw_intensity = roi_raw_intensity(:,~remove_rois_bool);
-    %inter_fits = inter_fits(:,~remove_rois_bool);
-    %inter_factor = inter_factor(:,~remove_rois_bool);
+    roi_raw_intensity = roi_raw_intensity(:,~remove_rois_bool);
+    inter_fits = inter_fits(:,~remove_rois_bool);
+    inter_factor = inter_factor(:,~remove_rois_bool);
     mean_inter_fit = mean_inter_fit(:,~remove_rois_bool);
     mean_inter_resp = mean_inter_resp(:,~remove_rois_bool);
 
 else
     % there are no ROIs to remove
-    roi_final = roi_select;
+    roi_select = roi_select;
 end
 
-mean_inter.resp = mean_inter_resp;
-mean_inter.fit = mean_inter_fit;
-mean_inter.times = mean_inter_times;
 
 end
