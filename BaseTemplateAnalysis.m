@@ -27,8 +27,8 @@ param.mean_amplification_thresh = 1.2; % this gets rid of ROIs with bad F0 fits 
 % parameters for what code will compute
 param.force_alignment = false; % force alignment calculation?
 param.force_roi_selection = true; % force calculation of ROIs?
-param.manual_roi = false; % manually define the ROIs
-param.group_method = 'manual'; % how to group ROIs
+param.manual_roi = false;
+param.group_method = 'None'; % how to group selected ROIs
 
 %% Run Analysis
 for i_ex = param.analyze_these
