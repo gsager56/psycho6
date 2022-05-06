@@ -51,10 +51,12 @@ function probe_idxs = get_probe_idxs(epoch_trace, param)
         figure;
         subplot(2,1,1)
         plot(epoch_trace(probe_idxs{1}))
+        ylabel('Epoch Index')
         title('probe 1')
 
         subplot(2,1,2)
         plot(epoch_trace(probe_idxs{2}))
+        ylabel('Epoch Index')
         title('probe 2')
     end
     

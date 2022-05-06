@@ -4,7 +4,7 @@ function [roi_dff, roi_final, mean_inter] = roi_dff_calc( param, exp_info, roi_s
 % roi_final is a mask of all the ROIs
 % filtered_movie is the aligned and background subtracted movie
 
-[n_rows, n_cols, n_t] = size(filtered_movie);
+n_t = size(filtered_movie,3);
 num_rois = max(roi_select,[],'all');
 
 % intialize matrices
@@ -21,7 +21,15 @@ for i_roi = 1 : num_rois
 end
 
 % boolean vector of time indices belonging to the interleave
-inter_bool = ismember(exp_info.epochVal, param.interleave_epochs);
+init_inter_bool = ismember(exp_info.epochVal, param.interleave_epochs);
+inter_bool = false( size(init_inter_bool) );
+inter_epoch_ids = bwlabel(init_inter_bool);
+for i_inter_epoch = 1 : max(inter_epoch_ids)
+    this_epoch_bool = i_inter_epoch == inter_epoch_ids;
+    idxs = find(this_epoch_bool, ceil(sum(this_epoch_bool)*param.frac_interleave), 'last');
+    inter_bool(idxs) = true;
+end
+
 inter_times = exp_info.time( inter_bool )'; % time that interleave is presented
 if strcmp(roi_dff_method, 'mean_resp')
     % calculate F0 as the mean response during the iterleaves. This method

@@ -10,8 +10,9 @@ surgeon='Harsh';
 dataPath=GetPathsFromDatabase(cellType,stim,sensor,flyEye,surgeon);
 
 %% PARAMETERS YOU NEED TO SPECIFY
+param.stim = stim; % don't change this line
 param.movieChan = 1; % which channels do you want to analyze in the movie
-param.probe_epochs = 1 : 7;
+param.probe_epochs = 'do it for me';
 param.interleave_epochs = 8;
 
 % what flies do you want to analyze?
@@ -28,13 +29,14 @@ param.mean_amplification_thresh = 1.2; % this gets rid of ROIs with bad F0 fits 
 param.force_alignment = false; % force alignment calculation?
 param.force_roi_selection = true; % force calculation of ROIs?
 param.manual_roi = false;
-param.group_method = 'None'; % how to group selected ROIs
+param.group_method = 'none'; % how to group selected ROIs
+param.frac_interleave = 0.5; % fraction of the interleave to use for computing F0 for DF/F
 
 %% Run Analysis
 for i_ex = param.analyze_these
     
     %% load in experimental parameters and raw movie
-    [exp_info, raw_movie] = get_exp_details( dataPath{i_ex}, param);
+    [exp_info, raw_movie, param] = get_exp_details( dataPath{i_ex}, param);
     % number of fly I'm on
     param.fly_num = find(i_ex == param.analyze_these);
     clc;
@@ -135,7 +137,7 @@ for i_ex = param.analyze_these
         probe_idxs = get_probe_idxs(exp_info.epochVal, param);
         roi_select = probe_correlation( filtered_movie, param, roi_extract, corr_img, probe_idxs );
         
-        if strcmp(param.group_method, 'None')
+        if strcmp(param.group_method, 'none')
             % do nothing
         elseif strcmp(param.group_method, 'touching')
             % group rois that are touching
@@ -156,9 +158,9 @@ for i_ex = param.analyze_these
     epoch_trace = exp_info.epochVal; % rename this to make it easier to remember
     disp('Finished Calculating ROIs')
     %% save important output to resp cell array
-    resp{param.fly_num}.dff = roi_dff;
-    resp{param.fly_num}.epoch_trace = epoch_trace;
-    resp{param.fly_num}.roi_final = roi_final;
+    resp{param.fly_num}.dff = roi_dff; % delta F over F for each "good" ROI
+    resp{param.fly_num}.epoch_trace = epoch_trace; % epochs presented over time
+    resp{param.fly_num}.roi_final = roi_final; % final ROI mask
     
     %% Plot Stuff That Every User Probably Wants
     
@@ -166,7 +168,6 @@ for i_ex = param.analyze_these
     
         % plot the dx and dy
         MakeFigure; hold on
-
         subplot(2, 1, 1)
         % subplot of dx change
         plot(exp_info.time ./ 60, dx_filt, 'linewidth', 1)

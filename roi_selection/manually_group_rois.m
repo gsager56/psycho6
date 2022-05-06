@@ -62,6 +62,9 @@ while keep_going
     end
 end
 
+clc;
+disp('Continuing to process your data...')
+
 if any(roi_display>0,'all')
     % there are still rois left
     unchosen_rois = unique(roi_display(roi_display>0));
