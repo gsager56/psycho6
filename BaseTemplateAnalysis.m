@@ -38,6 +38,7 @@ for i_ex = param.analyze_these
     %% load in experimental parameters and raw movie
     [exp_info, raw_movie, param] = get_exp_details( dataPath{i_ex}, param);
     % number of fly I'm on
+    
     param.fly_num = find(i_ex == param.analyze_these);
     clc;
     
