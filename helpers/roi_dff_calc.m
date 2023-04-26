@@ -39,7 +39,7 @@ if strcmp(roi_dff_method, 'mean_resp')
     
     F0 = mean( roi_raw_intensity(inter_bool, :), 1);
     roi_dff = (roi_raw_intensity - F0) ./ F0;
-    inter_fits = repmat(F0,length(inter_times),1);
+    inter_fits = repmat(F0,length(roi_raw_intensity),1);
 elseif strcmp(roi_dff_method, 'exponential')
     % fit an exponential to the interleave responses
     % x(:,1) is the time vector
