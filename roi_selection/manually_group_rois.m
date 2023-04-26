@@ -58,6 +58,7 @@ while keep_going
     if any(roi_display > 0,'all')
         keep_going = input( 'Do you want to keep going (true/false)? ' );
     else
+        keep_going = false;
         disp('All ROIs have been grouped')
     end
 end
