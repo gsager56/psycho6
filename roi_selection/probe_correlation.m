@@ -1,4 +1,4 @@
-function roi_final = probe_correlation( movie, param, roi_init, corr_img, probe_idxs )
+function roi_final = probe_correlation( movie, param, roi_init, corr_img, probe_idxs, tissue_mask)
 % this roi selection function picks ROIs whose response is highly
 % correlated from the first and second probe presentation
 
@@ -22,6 +22,30 @@ function roi_final = probe_correlation( movie, param, roi_init, corr_img, probe_
             % the sake of time, let's not bother calculating the
             % correlation of this ROI's activity during the 1st and 2nd
             % probe
+        elseif strcmp(param.probe_correlation_type, 'in tissue')
+            % keep ROIs in the neural tissue
+            frac_tissue = mean( tissue_mask(this_roi_mask) );
+            if frac_tissue >= 0.5
+                roi_size = sum(this_roi_mask, 'all'); % size of ROI in pixels
+
+                % get intensity trace during 1st and second probe
+                probe_1.trace = sum( sum( (movie(:,:,probe_1_idxs) .* this_roi_mask) ./ roi_size, 1), 2);
+                probe_2.trace = sum( sum( (movie(:,:,probe_2_idxs) .* this_roi_mask) ./ roi_size, 1), 2);
+
+                % calculate correlation coefficient
+                correlation = corrcoef( probe_1.trace, probe_2.trace );
+
+                % see if there's a significant correlation
+                c=c+1;
+                corr_vec(c) = correlation(1,2);
+
+                if correlation(1,2) >= 0
+                    % WE HAVE A GOOD ROI, YAYYYY!!
+                    num_rois = num_rois + 1;
+                    roi_final( this_roi_mask ) = num_rois;
+                end
+            end
+            
         elseif strcmp(param.probe_correlation_type, 'probe indices')
             % use the indices specified by the user to compute which ROIs
             % are responding to the probe
