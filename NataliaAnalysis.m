@@ -45,7 +45,7 @@ param.mean_amplification_thresh = 10;%1.2; % this gets rid of ROIs with bad F0 f
 
 % parameters for what code will compute
 param.force_alignment = false; % force alignment calculation?
-param.force_roi_selection = true; % force calculation of ROIs?
+param.force_roi_selection = false; % force calculation of ROIs?
 param.manual_roi = false;
 param.group_method = 'manual'; % how to group selected ROIs
 param.frac_interleave = 0.5; % fraction of the interleave to use for computing F0 for DF/F
@@ -180,6 +180,7 @@ for i_ex = param.analyze_these
     resp{param.fly_num}.dff = roi_dff; % delta F over F for each "good" ROI
     resp{param.fly_num}.epoch_trace = epoch_trace; % epochs presented over time
     resp{param.fly_num}.roi_final = roi_final; % final ROI mask
+    resp{param.fly_num}.time = exp_info.time;
     
     %% Plot Stuff That Every User Probably Wants
     
@@ -287,11 +288,30 @@ end
 %resp{param.fly_num}.dff = roi_dff; % delta F over F for each "good" ROI
 %resp{param.fly_num}.epoch_trace = epoch_trace; % epochs presented over time
 %resp{param.fly_num}.roi_final = roi_final; % final ROI mask
-ep = [12 10 8 6 4 2];
+ep = [12 10 8 6 4 2]; % 18, 30, 60, 90, 120, 180
 % analyze fly 1
 epoch_trace = resp{1}.epoch_trace;
 roi_dff = resp{1}.dff(:,1);
 plot( roi_dff(epoch_trace == 7,:) )
+
+%% Will get you the position and time of the bar vertical stimulus!
+close all
+for ep = [12 10 8 6 4 2]
+    ids = bwlabel( resp{1}.epoch_trace == ep+3 );
+    xq = resp{1}.time( ids == 1 );
+    xq = xq - xq(1);
+    
+    vq = zeros(length(xq), size(resp{1}.dff,2) );
+    for id = 1 : max(ids)
+        x = resp{1}.time( ids == id );
+        v = resp{1}.dff(ids == id,:);
+        vq = vq + (interp1(x - x(1),v,xq) / max(ids));
+    end
+    degrees = xq / xq(end) * 360;
+    figure; plot( degrees, vq )
+    title(num2str(ep))
+    xlim([0 360])
+end
 
 %%
 
