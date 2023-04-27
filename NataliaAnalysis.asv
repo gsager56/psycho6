@@ -180,6 +180,7 @@ for i_ex = param.analyze_these
     resp{param.fly_num}.dff = roi_dff; % delta F over F for each "good" ROI
     resp{param.fly_num}.epoch_trace = epoch_trace; % epochs presented over time
     resp{param.fly_num}.roi_final = roi_final; % final ROI mask
+    resp{param.fly_num}.time = exp_info.time;
     
     %% Plot Stuff That Every User Probably Wants
     
@@ -287,11 +288,31 @@ end
 %resp{param.fly_num}.dff = roi_dff; % delta F over F for each "good" ROI
 %resp{param.fly_num}.epoch_trace = epoch_trace; % epochs presented over time
 %resp{param.fly_num}.roi_final = roi_final; % final ROI mask
-
+ep = [12 10 8 6 4 2]; % 18, 30, 60, 90, 120, 180
 % analyze fly 1
 epoch_trace = resp{1}.epoch_trace;
-roi_dff = resp{1}.dff(:,1:8);
-plot( roi_dff(epoch_trace == 13,:) )
+roi_dff = resp{1}.dff(:,1);
+plot( roi_dff(epoch_trace == 7,:) )
+
+%%
+for ep = 1 : 19 #[12 10 8 6 4 2]
+    ids = bwlabel( resp{1}.epoch_trace == ep+2 );
+    xq = resp{1}.time( ids == 1 );
+    xq = xq - xq(1);
+    
+    vq = zeros(length(xq), size(resp{1}.dff,2) );
+    for id = 1 : max(ids)
+        x = resp{1}.time( ids == id );
+        v = resp{1}.dff(ids == id,:);
+        vq = vq + (interp1(x - x(1),v,xq) / max(ids));
+    end
+    figure; plot( vq )
+    title(num2str(ep))
+end
+
+%%
+
+PlotXvsY(timeX1,roi_dff(epoch_trace == 13,:),'LineWidth ',2,'color',color(12,:,:))
 
 %%
 Resp12 = a.analysis{1, 1}.respMatPlot(27:end,:); %(27:end,:)or (18:end,:)
