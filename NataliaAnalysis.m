@@ -296,6 +296,9 @@ plot( roi_dff(epoch_trace == 7,:) )
 
 %% Will get you the position and time of the bar vertical stimulus!
 close all
+color = linspecer(7);
+time = {};
+respCond ={};
 for ep = [12 10 8 6 4 2]
     ids = bwlabel( resp{1}.epoch_trace == ep+3 );
     xq = resp{1}.time( ids == 1 );
@@ -308,24 +311,46 @@ for ep = [12 10 8 6 4 2]
         vq = vq + (interp1(x - x(1),v,xq) / max(ids));
     end
     degrees = xq / xq(end) * 360;
-    figure; plot( degrees, vq )
+    respCond{end+1} = vq;
+    time{end+1} = xq;
+    %figure; plot( degrees, vq);
     title(num2str(ep))
     xlim([0 360])
 end
 
 %%
 
-PlotXvsY(timeX1,roi_dff(epoch_trace == 13,:),'LineWidth ',2,'color',color(12,:,:))
+for roi = 1:7
+plot(time{6},respCond{6}(:,roi),'LineWidth',2,'Color',color(roi,:,:))
+hold on
+legend('1-10','10-20','20-30','30-40','40-50','50-60','60-70')
+xlabel('Time (s)','FontSize', 16)
+ylabel(' \DeltaF/F','FontSize', 16)
+
+
+
+ax=gca;
+ax.XAxis.FontSize = 16;
+ax.YAxis.FontSize = 16
+% ax.FontSize = 16;
+end
+hold on
+PlotConstLine(0,1); % horizontal 0 line
 
 %%
-Resp12 = a.analysis{1, 1}.respMatPlot(27:end,:); %(27:end,:)or (18:end,:)
-RespSEM12= a.analysis{1, 1}.respMatSemPlot(27:end,:); %(27:end,:)
-
-timeX12 = a.analysis{1}.timeX/1000; % converting ms to s
-timeX12 = timeX(timeX>0);
-
-color=linspecer(12);
-ind = 6;
-
-PlotXvsY(timeX1,Resp1(:,ep(ind)),'error',RespSEM1(:,ep(ind)),'LineWidth ',2,'color',color(12,:,:))
-
+% %%
+% 
+% PlotXvsY(timeX1,roi_dff(epoch_trace == 13,:),'LineWidth ',2,'color',color(12,:,:))
+% 
+% %%
+% Resp12 = a.analysis{1, 1}.respMatPlot(27:end,:); %(27:end,:)or (18:end,:)
+% RespSEM12= a.analysis{1, 1}.respMatSemPlot(27:end,:); %(27:end,:)
+% 
+% timeX12 = a.analysis{1}.timeX/1000; % converting ms to s
+% timeX12 = timeX(timeX>0);
+% 
+% color=linspecer(12);
+% ind = 6;
+% 
+% PlotXvsY(timeX1,Resp1(:,ep(ind)),'error',RespSEM1(:,ep(ind)),'LineWidth ',2,'color',color(12,:,:))
+% 
