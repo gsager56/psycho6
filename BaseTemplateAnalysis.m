@@ -125,6 +125,7 @@ for i_ex = param.analyze_these
     %% Get ROIs from correlation image
     
     roi_mask_file = fullfile(storage_folder, 'roi_masks.mat');
+    probe_idxs = get_probe_idxs(exp_info.epochVal, param);
     if ~param.force_roi_selection && isfile( roi_mask_file )
         load( roi_mask_file )
     else
@@ -135,7 +136,6 @@ for i_ex = param.analyze_these
             % try to programmatically define the ROIs
             roi_extract = WatershedImage(corr_img); % psycho5 function that uses watershed, then tries to fill in the borders
         end
-        probe_idxs = get_probe_idxs(exp_info.epochVal, param);
         roi_select = probe_correlation( filtered_movie, param, roi_extract, corr_img, probe_idxs );
         
         if strcmp(param.group_method, 'none')
