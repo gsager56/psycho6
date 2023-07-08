@@ -34,7 +34,7 @@ function tissue_prob = linear_tissue_prob_HighNeuronThresh(img, neuron_hist_thre
         lrg_prom_idx = find(prom > prom_thresh); % indices of the large prominance values
 
         % this is the large prominance threshold
-        big_thresh = 10^edges(idx(lrg_prom_idx));
+        big_thresh = 10.^edges(idx(lrg_prom_idx));
         if big_thresh > 0.4
             % this is almost certainly the neural tissue
             % let's find the distribution peak of pixels below the mean
@@ -60,7 +60,7 @@ function tissue_prob = linear_tissue_prob_HighNeuronThresh(img, neuron_hist_thre
             % largest prominance peak corresponds probably to the neural tissue
             % since neuron is so weak, let's use this peak as the threshold
             [~, neuron_prom_idx] = max(prom);
-            neuron.I_thresh = 10^edges(idx(neuron_prom_idx));
+            neuron.I_thresh = 10.^edges(idx(neuron_prom_idx));
         end
     else
         % something unexpected happened
@@ -68,7 +68,7 @@ function tissue_prob = linear_tissue_prob_HighNeuronThresh(img, neuron_hist_thre
     end
 
     % find probabilities each pixel is part of a neuron
-    slope= 1 / (neuron.I_thresh-bkg.I_thresh); % slope of linear equation
+    slope= 1 ./ (neuron.I_thresh-bkg.I_thresh); % slope of linear equation
     b= -slope*bkg.I_thresh; % y-intercept of linear equation
     tissue_prob= slope.*img + b;
     tissue_prob(tissue_prob<0)= 0; % probabilities less than 0 are called 0

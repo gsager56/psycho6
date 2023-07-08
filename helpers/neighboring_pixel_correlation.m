@@ -35,7 +35,7 @@ function corr_img = neighboring_pixel_correlation( movie )
     % borders only have 5 neighbors
     corr_norm(:,1)=5; corr_norm(:,end)=5; corr_norm(1,:)=5; corr_norm(end,:)=5;
 
-    % 4 edges only have three neighbors
+    % 4 corners only have three neighbors
     corr_norm(1,1)=3; corr_norm(1,end)=3; corr_norm(end,1)=3; corr_norm(end,end)=3;
 
     % divide correlation image by the respective normalization
